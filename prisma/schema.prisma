@@ -5,20 +5,19 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
+  output   = "./generated"
   
 }
 
 datasource db {
   provider = "mysql"
-  // url = env("DATABASE_URL")
 }
 
 model User {
   id Int @id @default(autoincrement())
   createdAt DateTime @default(now())
-  userName String 
+  username String 
   password String
   role Role @default(USER)
 

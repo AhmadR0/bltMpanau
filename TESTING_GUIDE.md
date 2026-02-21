@@ -22,7 +22,7 @@ Kita harus login dulu untuk mendapatkan "kunci" (JWT) agar bisa mengakses API ya
 ```bash
 curl -X POST http://localhost:8000/api/auth/login \
      -H "Content-Type: application/json" \
-     -d '{"username": "admin001", "password": "admin123"}'
+     -d '{"username": "admin001", "password": "12345"}'
 ```
 
 **Hasil yang diharapkan (Simpan `token`-nya!):**
@@ -95,7 +95,49 @@ curl -X GET http://localhost:8000/api/auth/me
 
 ---
 
-## 3. Tips Pengujian di Postman
+## 3. Fitur Generate Warga & User (Admin Only)
+
+Fitur ini digunakan oleh Admin untuk mendaftarkan warga baru. Sistem akan otomatis membuatkan akun User dengan NIK sebagai username dan token unik sebagai password.
+
+### A. Generate Warga
+**Perintah cURL:**
+*(Ganti `<TOKEN_ADMIN>` dengan token yang didapat saat login admin)*
+```bash
+curl -X POST http://localhost:8000/api/warga/generate \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <TOKEN_ADMIN>" \
+     -d '{
+       "nik": "1234567890123456",
+       "nama": "Budi Santoso"
+     }'
+```
+
+**Hasil yang diharapkan:**
+```json
+{
+  "message": "Warga and User generated successfully",
+  "data": {
+    "nik": "1234567890123456",
+    "nama": "Budi Santoso",
+    "username": "1234567890123456",
+    "password_token": "A1B2C3D4"
+  }
+}
+```
+*Token `A1B2C3D4` inilah yang diberikan kepada warga untuk login.*
+
+---
+
+### B. List Semua Warga
+**Perintah cURL:**
+```bash
+curl -X GET http://localhost:8000/api/warga \
+     -H "Authorization: Bearer <TOKEN_ADMIN>"
+```
+
+---
+
+## 4. Tips Pengujian di Postman
 1.  Buat request baru (POST).
 2.  Input URL: `http://localhost:8000/api/auth/login`.
 3.  Pilih tab **Body** -> **raw** -> **JSON**.

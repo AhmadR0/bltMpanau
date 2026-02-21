@@ -4,7 +4,7 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import mariadb from "mariadb";
 import bcrypt from "bcrypt";
 
-const connectionString = `${process.env.DATABASE_URL}`;
+const connectionString = `${process.env.DATABASE_URL}`.replace("mysql://", "mariadb://");
 const adapter = new PrismaMariaDb(connectionString);
 const prisma = new PrismaClient({ adapter });
 

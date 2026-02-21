@@ -5,6 +5,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const connectionString = `${process.env.DATABASE_URL}`;
+const connectionString = `${process.env.DATABASE_URL}`.replace("mysql://", "mariadb://");
 const adapter = new PrismaMariaDb(connectionString);
 export const prisma = new PrismaClient({ adapter });

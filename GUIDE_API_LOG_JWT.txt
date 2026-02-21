@@ -1,0 +1,61 @@
+PANDUAN PENGEMBANGAN: API LOGIN + JWT (PRISMA 7)
+
+Halo! Sesuai permintaanmu, berikut adalah panduan struktur folder dan langkah-langkah untuk membuat API Login + JWT di project ini.
+
+1. STRUKTUR DIREKTORI (REKOMENDASI)
+-----------------------------------
+Agar project kamu rapi (Clean Architecture), gunakan struktur ini:
+
+src/
+├── config/
+│   └── prisma.ts       <-- Saya sudah buatkan (Singleton PrismaClient)
+├── controller/
+│   └── authController.ts <-- Tempat logika Login/Register (pake bcrypt)
+├── routes/
+│   └── authRoutes.ts    <-- Definisi endpoint (POST /login)
+├── utils/
+│   └── authMiddleware.ts <-- Middleware untuk cek Token JWT
+├── app.ts              <-- Setup Express (Middleware, Route global)
+└── index.ts            <-- Bootstrapping (Jalankan server)
+
+2. DIMANA BUAT MODEL?
+---------------------
+- JAWAABAN: Tetap di `prisma/schema.prisma`.
+- KENAPA?: Prisma adalah "Source of Truth". Setelah edit file ini, jalankan `npx prisma generate`.
+- CATATAN: Folder `src/model` bisa kamu gunakan untuk menyimpan Interface TypeScript tambahan (DTO/Request Body types), tapi bukan struktur tabel database.
+
+3. LANGKAH-LANGKAH MEMBUAT API LOGIN
+------------------------------------
+
+Langkah 1: Setup ENV
+Tambahkan baris ini di file `.env` kamu:
+JWT_SECRET="rahasia_kamu_di_sini"
+
+Langkah 2: Auth Controller (src/controller/authController.ts)
+Di sini kamu akan:
+- Menerima username & password dari `req.body`.
+- Cari user di database pake `prisma.user.findUnique({ where: { username } })`.
+- Bandingkan password pake `bcrypt.compare()`.
+- Jika cocok, buat token pake `jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET)`.
+
+Langkah 3: Register Route (src/routes/authRoutes.ts)
+Hubungkan controller tadi ke endpoint:
+router.post('/login', authController.login);
+
+Langkah 4: Global App Setup (src/app.ts)
+Import route kamu dan gunakan di Express:
+app.use('/api/auth', authRoutes);
+
+4. CARA PROTEKSI API LAIN (JWT MIDDLEWARE)
+------------------------------------------
+Di `src/utils/authMiddleware.ts`, buat fungsi yang mengecek header `Authorization: Bearer <token>`.
+Gunakan `jwt.verify()` untuk memastikan token asli sebelum mengizinkan request ke controller.
+
+---
+SAYA SUDAH MENYIAPKAN:
+1. Update `schema.prisma` (Username sekarang @unique).
+2. Install `jsonwebtoken`.
+3. Buat file `src/config/prisma.ts` yang sudah support Prisma 7 Adapter.
+
+Sekarang kamu bisa mulai mengisi file di folder `src/controller` dan `src/routes` mengikuti pola ini!
+Gaskeun! 🚀

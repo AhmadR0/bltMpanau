@@ -8,4 +8,12 @@ const router: Router = Router();
 router.post("/generate", authenticateJWT, wargaController.generateWarga);
 router.get("/", authenticateJWT, wargaController.getAllWarga);
 
+// FLOW 2: Warga melengkapi data (Self-service)
+router.put("/update-data", authenticateJWT, wargaController.updateDataMandiri);
+
+// FLOW 3: Admin Management & Verification
+router.get("/:id", authenticateJWT, wargaController.getWargaDetail);
+router.patch("/verify/:id", authenticateJWT, wargaController.adminVerifyWarga);
+router.delete("/:id", authenticateJWT, wargaController.deleteWarga);
+
 export default router;

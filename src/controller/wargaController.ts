@@ -79,16 +79,43 @@ export const getAllWarga = async (req: Request, res: Response) => {
     }
 };
 
-/**
- * FLOW 2: Warga Mengisi Data Mandiri (Boilerplate)
- * Deskripsi: Warga yang sudah login melengkapi data profil & upload foto.
- */
-export const updateDataMandiri = async (req: any, res: Response) => {
+export const updateDataMandiri = async (req: Request, res: Response) => {
     try {
-        // TODO: Ambil userId dari req.user.id (JWT)
-        // TODO: Handle upload file dari req.files (Multer)
-        // TODO: Update tabel Warga berdasarkan userId sesuai gambar form
-        return res.json({ message: "Boilerplate: Fungsi update data mandiri siap diisi" });
+        // 1. Ambil User ID dari JWT (sudah disuntikkan oleh middleware)
+        const userId = (req as any).user.id;
+
+        // 2. Ambil data teks dari body
+        const { address } = req.body;
+
+        // 3. Ambil data file dari Multer
+        const files = req.files as { [key: string]: Express.Multer.File[] } | undefined;
+
+        // 4. Siapkan data untuk update database
+        const dataToUpdate: any = {};
+
+        if (address) {
+            dataToUpdate.address = address;
+        }
+
+        // Cek satu per satu file yang diunggah
+        if (files) {
+            if (files["fotoKtp"]?.[0]) dataToUpdate.fotoKtp = (files["fotoKtp"][0] as Express.Multer.File).path;
+            if (files["fotoKk"]?.[0]) dataToUpdate.fotoKk = (files["fotoKk"][0] as Express.Multer.File).path;
+            if (files["fotoRumah"]?.[0]) dataToUpdate.fotoRumah = (files["fotoRumah"][0] as Express.Multer.File).path;
+            if (files["fotoDapur"]?.[0]) dataToUpdate.fotoDapur = (files["fotoDapur"][0] as Express.Multer.File).path;
+        }
+
+        // 5. EKSEKUSI: Simpan ke Database (PENTING!)
+        const updatedWarga = await prisma.warga.update({
+            where: { userId: userId },
+            data: dataToUpdate,
+        });
+
+        return res.json({
+            success: true,
+            message: "Data warga berhasil diperbarui",
+            data: updatedWarga
+        });
     } catch (error) {
         console.error("Update mandiri error:", error);
         return res.status(500).json({ message: "Internal server error" });

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as wargaController from "../controller/wargaController.js";
 import { authenticateJWT } from "../utils/authMiddleware.js";
+import { uploadWargaFiles } from "../utils/uploadMiddleware.js";
 
 const router: Router = Router();
 
@@ -9,7 +10,12 @@ router.post("/generate", authenticateJWT, wargaController.generateWarga);
 router.get("/", authenticateJWT, wargaController.getAllWarga);
 
 // FLOW 2: Warga melengkapi data (Self-service)
-router.put("/update-data", authenticateJWT, wargaController.updateDataMandiri);
+router.put(
+    "/uploadForm", 
+    authenticateJWT, 
+    uploadWargaFiles,
+    wargaController.updateDataMandiri,
+);
 
 // FLOW 3: Admin Management & Verification
 router.get("/:id", authenticateJWT, wargaController.getWargaDetail);

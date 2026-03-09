@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { prisma } from "../config/prisma.js";
+import PDFDocument from "pdfkit-table";
 
 
 export const generateWarga = async (req: Request, res: Response) => {
@@ -294,7 +295,6 @@ export const restoreWarga = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "Data warga ini memang tidak dalam keadaan terhapus" });
         }
 
-        // Restore: Ubah isDeleted jadi false
         await prisma.warga.update({
             where: { id: wargaId },
             data: { isDeleted: false }
@@ -307,5 +307,76 @@ export const restoreWarga = async (req: Request, res: Response) => {
     } catch (error) {
         console.error("Restore error:", error);
         return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const exportWargaPdf = async (req: Request, res: Response) => {
+    try {
+        // 1. Ambil data warga dari database (hanya yang tidak dihapus)
+        const allWarga = await prisma.warga.findMany({
+            where: { isDeleted: false },
+            include: { user: { select: { username: true } } }
+        });
+
+        // 2. Setup Document PDF
+        const doc = new PDFDocument({ margin: 30, size: 'A4' });
+
+        // 3. Set header HTTP untuk response PDF
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=Laporan_Data_Warga.pdf');
+
+        // Pipe PDF output langsung ke HTTP Response
+        doc.pipe(res);
+
+        // Header Dokumen
+        doc.fontSize(20).text('Laporan Data Warga (BLT)', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12).text(`Tanggal Dicetak: ${new Date().toLocaleDateString('id-ID')}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // 4. Transformasi Data untuk Tabel
+        const tableRows = allWarga.map((w, index) => [
+            (index + 1).toString(),
+            w.nik,
+            w.nama,
+            w.address || '-',
+            w.status
+        ]);
+
+        // 5. Konfigurasi Tabel
+        const table = {
+            title: "Daftar Warga Pemohon Bantuan",
+            subtitle: "Berisi seluruh data warga yang aktif di sistem",
+            headers: [
+                { label: "No", property: 'no', width: 30, render: null },
+                { label: "NIK", property: 'nik', width: 100, render: null },
+                { label: "Nama Lengkap", property: 'nama', width: 150, render: null },
+                { label: "Alamat", property: 'alamat', width: 160, render: null },
+                { label: "Status Bantuan", property: 'status', width: 80, render: null }
+            ],
+            rows: tableRows
+        };
+
+        // 6. Eksekusi render tabel
+        await doc.table(table, {
+            prepareHeader: () => doc.font("Helvetica-Bold").fontSize(10),
+            // Explicitly return doc untuk memuaskan TypeScript PDFDocumentWithTables
+            prepareRow: (row: any, indexColumn: number | undefined, indexRow: number | undefined, rectRow: any) => {
+                // @ts-ignore : addBackground kadang tidak terbaca oleh library @types/pdfkit reguler
+                if (indexColumn === 0) doc.addBackground(rectRow, 'white', 0.15);
+                return doc.font("Helvetica").fontSize(10);
+            },
+        });
+
+        // 7. Selesai dan tutup dokumen
+        doc.end();
+
+    } catch (error) {
+        console.error("Export PDF error:", error);
+        // Jika sudah pipe res, kita tak bisa kirim res.status(500) dengan gampang tanpa merusak stream. 
+        // Tapi kita tetap coba kirim respons error di headers jika belum terkirim.
+        if (!res.headersSent) {
+            return res.status(500).json({ message: "Internal server error saat generate PDF" });
+        }
     }
 };

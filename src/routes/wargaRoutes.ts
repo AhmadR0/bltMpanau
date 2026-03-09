@@ -6,15 +6,20 @@ import { uploadWargaFiles } from "../utils/uploadMiddleware.js";
 const router: Router = Router();
 
 router.post(
-    "/generate", 
-    authenticateJWT, 
+    "/generate",
+    authenticateJWT,
     wargaController.generateWarga
 );
 
+router.get(
+    "/export/pdf",
+    authenticateJWT,
+    wargaController.exportWargaPdf
+);
 
 router.get(
-    "/", 
-    authenticateJWT, 
+    "/",
+    authenticateJWT,
     wargaController.getAllWarga
 );
 
@@ -25,15 +30,15 @@ router.get(
 )
 
 router.put(
-    "/uploadForm", 
-    authenticateJWT, 
+    "/uploadForm",
+    authenticateJWT,
     uploadWargaFiles,
     wargaController.updateDataMandiri,
 );
 
 router.get(
-    "/:id", 
-    authenticateJWT, 
+    "/:id",
+    authenticateJWT,
     wargaController.getWargaDetail
 );
 

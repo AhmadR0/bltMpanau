@@ -3,9 +3,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { prisma } from "../config/prisma.js";
 
-/**
- * FLOW 1: Admin Generate Warga
- */
+
 export const generateWarga = async (req: Request, res: Response) => {
     try {
         const { nik, nama } = req.body;
@@ -81,23 +79,22 @@ export const getAllWarga = async (req: Request, res: Response) => {
 
 export const updateDataMandiri = async (req: Request, res: Response) => {
     try {
-        // 1. Ambil User ID dari JWT (sudah disuntikkan oleh middleware)
+        
         const userId = (req as any).user.id;
 
-        // 2. Ambil data teks dari body
-        const { address } = req.body;
+        const { 
+            address,
 
-        // 3. Ambil data file dari Multer
+         } = req.body;
+
         const files = req.files as { [key: string]: Express.Multer.File[] } | undefined;
 
-        // 4. Siapkan data untuk update database
         const dataToUpdate: any = {};
 
         if (address) {
             dataToUpdate.address = address;
         }
 
-        // Cek satu per satu file yang diunggah
         if (files) {
             if (files["fotoKtp"]?.[0]) dataToUpdate.fotoKtp = (files["fotoKtp"][0] as Express.Multer.File).path;
             if (files["fotoKk"]?.[0]) dataToUpdate.fotoKk = (files["fotoKk"][0] as Express.Multer.File).path;
@@ -105,7 +102,6 @@ export const updateDataMandiri = async (req: Request, res: Response) => {
             if (files["fotoDapur"]?.[0]) dataToUpdate.fotoDapur = (files["fotoDapur"][0] as Express.Multer.File).path;
         }
 
-        // 5. EKSEKUSI: Simpan ke Database (PENTING!)
         const updatedWarga = await prisma.warga.update({
             where: { userId: userId },
             data: dataToUpdate,
@@ -121,6 +117,41 @@ export const updateDataMandiri = async (req: Request, res: Response) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 };
+
+export const getWargaByid = async (req: Request, res: Response) => {
+    try {
+        const SelectId = Number(req.params.id)
+        if (isNaN(SelectId)) {
+            return res.status(400).json({ message: "Format ID tidak valid" });
+        }
+        const detailWarga = await prisma.warga.findUnique({
+            where: {
+                userId: SelectId
+            },
+            include: {
+                user: {
+                    select: {
+                        username: true,
+
+                        role: true
+                    }
+                }
+            }
+        })
+        if (!detailWarga) {
+            return res.status(404).json({ message: "Data warga tidak ditemukan!" });
+        }
+
+        return res.json({
+            message: "Berhasil mengambil detail warga",
+            data: detailWarga
+        });
+    } catch (error) {
+        console.error("Get detail error:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+
+}
 
 /**
  * FLOW 3: Admin Verifikasi & Management (Boilerplate)

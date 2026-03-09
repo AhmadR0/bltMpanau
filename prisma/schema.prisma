@@ -32,6 +32,7 @@ model Warga {
   fotoRumah  String?
   fotoDapur  String?
   address    String?
+  isDeleted  Boolean        @default(false)
   user       User           @relation(fields: [userId], references: [id])
   userId     Int            @unique
   notes      RejectedNote[] // Relasi One-to-Many ke catatan penolakan

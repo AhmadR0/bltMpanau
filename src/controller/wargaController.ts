@@ -61,6 +61,9 @@ export const generateWarga = async (req: Request, res: Response) => {
 export const getAllWarga = async (req: Request, res: Response) => {
     try {
         const warga = await prisma.warga.findMany({
+            where: {
+                isDeleted: false
+            },
             include: {
                 user: {
                     select: {
@@ -127,15 +130,15 @@ export const getWargaByid = async (req: Request, res: Response) => {
         if (isNaN(SelectId)) {
             return res.status(400).json({ message: "Format ID tidak valid" });
         }
-        const detailWarga = await prisma.warga.findUnique({
+        const detailWarga = await prisma.warga.findFirst({
             where: {
-                userId: SelectId
+                userId: SelectId,
+                isDeleted: false
             },
             include: {
                 user: {
                     select: {
                         username: true,
-
                         role: true
                     }
                 },
@@ -145,7 +148,7 @@ export const getWargaByid = async (req: Request, res: Response) => {
                     }
                 }
             }
-        })
+        });
         if (!detailWarga) {
             return res.status(404).json({ message: "Data warga tidak ditemukan!" });
         }
@@ -246,13 +249,63 @@ export const adminVerifyWarga = async (req: Request, res: Response) => {
     }
 };
 
-// Hapus Warga & User (Cascade)
 export const deleteWarga = async (req: Request, res: Response) => {
     try {
-        // TODO: Transaction hapus Warga & User terkait
-        return res.json({ message: "Boilerplate: Fungsi delete siap diisi" });
+        const wargaId = Number(req.params.id);
+
+        if (isNaN(wargaId)) {
+            return res.status(400).json({ message: "Format ID tidak valid" });
+        }
+
+        const existingWarga = await prisma.warga.findUnique({ where: { id: wargaId } });
+        if (!existingWarga) {
+            return res.status(404).json({ message: "Data warga tidak ditemukan" });
+        }
+
+        await prisma.warga.update({
+            where: { id: wargaId },
+            data: { isDeleted: true }
+        });
+
+        return res.json({
+            success: true,
+            message: "Data warga berhasil dihapus (disembunyikan)"
+        });
     } catch (error) {
         console.error("Delete error:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const restoreWarga = async (req: Request, res: Response) => {
+    try {
+        const wargaId = Number(req.params.id);
+
+        if (isNaN(wargaId)) {
+            return res.status(400).json({ message: "Format ID tidak valid" });
+        }
+
+        const existingWarga = await prisma.warga.findUnique({ where: { id: wargaId } });
+        if (!existingWarga) {
+            return res.status(404).json({ message: "Data warga tidak ditemukan" });
+        }
+
+        if (existingWarga.isDeleted === false) {
+            return res.status(400).json({ message: "Data warga ini memang tidak dalam keadaan terhapus" });
+        }
+
+        // Restore: Ubah isDeleted jadi false
+        await prisma.warga.update({
+            where: { id: wargaId },
+            data: { isDeleted: false }
+        });
+
+        return res.json({
+            success: true,
+            message: "Data warga berhasil dipulihkan (Restore)"
+        });
+    } catch (error) {
+        console.error("Restore error:", error);
         return res.status(500).json({ message: "Internal server error" });
     }
 };

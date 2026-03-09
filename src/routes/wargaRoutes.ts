@@ -5,7 +5,6 @@ import { uploadWargaFiles } from "../utils/uploadMiddleware.js";
 
 const router: Router = Router();
 
-// Endpoint ini biasanya hanya untuk Admin
 router.post(
     "/generate", 
     authenticateJWT, 
@@ -25,7 +24,6 @@ router.get(
     wargaController.getWargaByid
 )
 
-// FLOW 2: Warga melengkapi data (Self-service)
 router.put(
     "/uploadForm", 
     authenticateJWT, 
@@ -33,7 +31,6 @@ router.put(
     wargaController.updateDataMandiri,
 );
 
-// FLOW 3: Admin Management & Verification
 router.get(
     "/:id", 
     authenticateJWT, 

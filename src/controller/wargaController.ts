@@ -79,13 +79,13 @@ export const getAllWarga = async (req: Request, res: Response) => {
 
 export const updateDataMandiri = async (req: Request, res: Response) => {
     try {
-        
+
         const userId = (req as any).user.id;
 
-        const { 
+        const {
             address,
 
-         } = req.body;
+        } = req.body;
 
         const files = req.files as { [key: string]: Express.Multer.File[] } | undefined;
 
@@ -102,6 +102,9 @@ export const updateDataMandiri = async (req: Request, res: Response) => {
             if (files["fotoDapur"]?.[0]) dataToUpdate.fotoDapur = (files["fotoDapur"][0] as Express.Multer.File).path;
         }
 
+
+        dataToUpdate.status = "Menunggu";
+
         const updatedWarga = await prisma.warga.update({
             where: { userId: userId },
             data: dataToUpdate,
@@ -109,7 +112,7 @@ export const updateDataMandiri = async (req: Request, res: Response) => {
 
         return res.json({
             success: true,
-            message: "Data warga berhasil diperbarui",
+            message: "Data warga berhasil diperbarui, status kembali menjadi Menunggu.",
             data: updatedWarga
         });
     } catch (error) {
@@ -135,6 +138,11 @@ export const getWargaByid = async (req: Request, res: Response) => {
 
                         role: true
                     }
+                },
+                notes: {
+                    orderBy: {
+                        createdAt: 'desc'
+                    }
                 }
             }
         })
@@ -154,7 +162,7 @@ export const getWargaByid = async (req: Request, res: Response) => {
 }
 
 /**
- * FLOW 3: Admin Verifikasi & Management (Boilerplate)
+ * FLOW 3: Admin Verifikasi & Management
  */
 
 // Menampilkan detail warga lengkap
@@ -169,12 +177,69 @@ export const getWargaDetail = async (req: Request, res: Response) => {
     }
 };
 
-// Admin Mengubah Status & Input Nominal BLT
 export const adminVerifyWarga = async (req: Request, res: Response) => {
     try {
-        // TODO: Ambil ID dari params & status/nominal dari body
-        // TODO: Update field 'status' & 'nominalBlt' di tabel Warga
-        return res.json({ message: "Boilerplate: Fungsi verifikasi Admin siap diisi" });
+        const wargaId = Number(req.params.id);
+        const { status, catatan } = req.body;
+
+        if (isNaN(wargaId)) {
+            return res.status(400).json({ message: "Format ID tidak valid" });
+        }
+
+        if (!status) {
+            return res.status(400).json({ message: "Status persetujuan wajib diisi (Disetujui/Ditolak)" });
+        }
+
+        const existingWarga = await prisma.warga.findUnique({ where: { id: wargaId } });
+        if (!existingWarga) {
+            return res.status(404).json({ message: "Data warga tidak ditemukan" });
+        }
+
+        if (status === "Ditolak") {
+            if (!catatan || catatan.trim() === "") {
+                return res.status(400).json({ message: "Catatan wajib diisi jika permohonan ditolak" });
+            }
+
+            const result = await prisma.$transaction(async (tx) => {
+                const updatedWarga = await tx.warga.update({
+                    where: { id: wargaId },
+                    data: { status: "Ditolak" }
+                });
+
+                const newNote = await tx.rejectedNote.create({
+                    data: {
+                        wargaId: wargaId,
+                        catatan: catatan
+                    }
+                });
+
+                return { updatedWarga, newNote };
+            });
+
+            return res.json({
+                message: "Data warga berhasil ditolak",
+                data: result
+            });
+        }
+
+        else if (status === "Disetujui") {
+            const updatedWarga = await prisma.warga.update({
+                where: { id: wargaId },
+                data: {
+                    status: "Disetujui"
+                }
+            });
+
+            return res.json({
+                message: "Data warga berhasil disetujui",
+                data: updatedWarga
+            });
+        }
+
+        else {
+            return res.status(400).json({ message: "Status tidak dikenali. Gunakan 'Disetujui' atau 'Ditolak'." });
+        }
+
     } catch (error) {
         console.error("Verify error:", error);
         return res.status(500).json({ message: "Internal server error" });

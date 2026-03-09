@@ -26,15 +26,23 @@ model Warga {
   id         Int      @id @default(autoincrement())
   nik        String   @unique
   nama       String
-  nominalBlt Decimal? @db.Decimal(15, 2)
   status     Status   @default(Menunggu)
   fotoKtp    String?
   fotoKk     String?
   fotoRumah  String?
   fotoDapur  String?
   address    String?
-  user       User     @relation(fields: [userId], references: [id])
-  userId     Int      @unique
+  user       User           @relation(fields: [userId], references: [id])
+  userId     Int            @unique
+  notes      RejectedNote[] // Relasi One-to-Many ke catatan penolakan
+}
+
+model RejectedNote {
+  id        Int      @id @default(autoincrement())
+  wargaId   Int
+  warga     Warga    @relation(fields: [wargaId], references: [id], onDelete: Cascade)
+  catatan   String   @db.Text
+  createdAt DateTime @default(now())
 }
 
 enum Role {

@@ -5,3 +5,5 @@ prisma/generated
 
 PRISMA_7_NOTES.txt
 example/
+
+src/uploads

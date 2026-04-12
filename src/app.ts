@@ -12,14 +12,12 @@ app.use(cors({
 
 app.use(express.json());
 
-// Serve folder uploads agar gambar bisa diakses dari Frontend via URL
+
 app.use("/uploads", express.static("uploads"));
 
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/warga", wargaRoutes);
 
-// Health check
 app.get("/health", (req, res) => {
     res.json({ status: "ok" });
 });

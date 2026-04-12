@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { prisma } from "../config/prisma.js";
 import PDFDocument from "pdfkit-table";
 
@@ -88,7 +90,7 @@ export const updateDataMandiri = async (req: Request, res: Response) => {
 
         const {
             address,
-
+            noHp
         } = req.body;
 
         const files = req.files as { [key: string]: Express.Multer.File[] } | undefined;
@@ -97,6 +99,10 @@ export const updateDataMandiri = async (req: Request, res: Response) => {
 
         if (address) {
             dataToUpdate.address = address;
+        }
+
+        if (noHp) {
+            dataToUpdate.noHp = noHp;
         }
 
         if (files) {
@@ -314,7 +320,7 @@ export const exportWargaPdf = async (req: Request, res: Response) => {
     try {
         
         const allWarga = await prisma.warga.findMany({
-            where: { isDeleted: false },
+            where: { isDeleted: false, status: 'Disetujui' },
             include: { user: { select: { username: true } } }
         });
 
@@ -326,9 +332,30 @@ export const exportWargaPdf = async (req: Request, res: Response) => {
 
         doc.pipe(res);
 
-        doc.fontSize(20).text('Laporan Data Warga (BLT)', { align: 'center' });
-        doc.moveDown();
-        doc.fontSize(12).text(`Tanggal Dicetak: ${new Date().toLocaleDateString('id-ID')}`, { align: 'center' });
+        // --- MULAI KOP SURAT ---
+        // Jika kamu punya gambar logo siri, letakkan di folder 'public' dengan nama 'logo-sigi.png'
+        const logoPath = path.resolve('public', 'logo-sigi.png');
+        if (fs.existsSync(logoPath)) {
+            // Posisi (x: 40, y: 30), width sedikit dikecilkan agar tak bocor ke garis
+            doc.image(logoPath, 40, 30, { width: 50 });
+        }
+
+        // Kop Pemerintah (Di-center tapi agak ke bawah jika ada logo)
+        doc.font('Helvetica-Bold').fontSize(16).text('PEMERINTAH KABUPATEN SIGI', { align: 'center' });
+        doc.font('Helvetica-Bold').fontSize(14).text('KECAMATAN SIGI BIROMARU', { align: 'center' });
+        doc.font('Helvetica-Bold').fontSize(14).text('DESA MPANAU', { align: 'center' });
+        
+        // Garis batas (Line under header)
+        // Kita beri jarak agak jauh (moveDown(2)) supaya logo yang agak panjang tidak tertabrak garis
+        doc.moveDown(2);
+        doc.moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+        doc.moveDown(1.5);
+        // --- SELESAI KOP SURAT ---
+
+        // Sub Judul Laporan Sesuai Request
+        doc.font('Helvetica-Bold').fontSize(14).text('Laporan Data Warga Penerima BLT Desa Mpanau Kec Sigi Biromaru', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.font('Helvetica').fontSize(11).text(`Tanggal Dicetak: ${new Date().toLocaleDateString('id-ID')}`, { align: 'center' });
         doc.moveDown(2);
 
         const tableRows = allWarga.map((w, index) => [
@@ -336,18 +363,18 @@ export const exportWargaPdf = async (req: Request, res: Response) => {
             w.nik,
             w.nama,
             w.address || '-',
-            w.status
+            w.noHp || '-'
         ]);
 
         const table = {
-            title: "Daftar Warga Pemohon Bantuan",
-            subtitle: "Berisi seluruh data warga yang aktif di sistem",
+            title: "Daftar Warga Penerima BLT",
+            subtitle: "Berisi seluruh data warga yang lolos seleksi dan berhak menerima bantuan",
             headers: [
                 { label: "No", property: 'no', width: 30, render: null },
                 { label: "NIK", property: 'nik', width: 100, render: null },
                 { label: "Nama Lengkap", property: 'nama', width: 150, render: null },
-                { label: "Alamat", property: 'alamat', width: 160, render: null },
-                { label: "Status Bantuan", property: 'status', width: 80, render: null }
+                { label: "Alamat", property: 'alamat', width: 140, render: null },
+                { label: "Nomor HP", property: 'noHp', width: 100, render: null }
             ],
             rows: tableRows
         };
